@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: ms-notificaciones
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://login.microsoftonline.com/e5372bf0-c5e3-4286-887c-79069f209c1f/v2.0
+
+  # RabbitMQ vive en la instancia de ms-ordenes. Default para pruebas LOCALES
+  # (mismo docker-compose). En producción se sobreescribe vía RABBITMQ_HOST.
+  rabbitmq:
+    host: ${RABBITMQ_HOST:rabbitmq}
+    port: 5672
+    username: guest
+    password: guest
+    virtual-host: /
+
+  # Credenciales de Gmail. NO van hardcodeadas acá -- se pasan como variables
+  # de entorno (en docker-compose, o en tu .env local).
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
+server:
+  port: 8086
