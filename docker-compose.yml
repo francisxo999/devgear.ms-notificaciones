@@ -1,0 +1,11 @@
+services:
+  app-notificaciones:
+    build: .
+    container_name: devgear-ms-notificaciones-1
+    restart: always
+    ports:
+      - "8086:8086"
+    environment:
+      MAIL_USERNAME: ${MAIL_USERNAME:?Define MAIL_USERNAME en el archivo .env}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:?Define MAIL_PASSWORD en el archivo .env}
+      RABBITMQ_HOST: ${RABBITMQ_HOST:?Define RABBITMQ_HOST en el archivo .env}
