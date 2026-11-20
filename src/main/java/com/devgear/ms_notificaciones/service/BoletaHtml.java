@@ -29,13 +29,14 @@ public final class BoletaHtml {
             BigDecimal subtotal = item.precioUnitario().multiply(BigDecimal.valueOf(item.cantidad()));
             filas.append("""
                 <tr>
-                  <td style="padding:14px 0;border-bottom:1px solid #e6e9f2;font-size:15px;color:#141a33;">
+                  <td width="80" style="padding:14px 14px 14px 0;border-bottom:1px solid #e6e9f2;vertical-align:top;">%s</td>
+                  <td style="padding:14px 0;border-bottom:1px solid #e6e9f2;font-size:15px;color:#141a33;vertical-align:top;">
                     <strong style="font-weight:600;">%s</strong><br>
                     <span style="font-size:13px;color:#6b7390;">%d × %s</span>
                   </td>
                   <td align="right" style="padding:14px 0;border-bottom:1px solid #e6e9f2;font-size:15px;color:#141a33;white-space:nowrap;vertical-align:top;">%s</td>
                 </tr>
-                """.formatted(escapar(item.nombreProducto()), item.cantidad(), clp(item.precioUnitario()), clp(subtotal)));
+                """.formatted(miniatura(item), escapar(item.nombreProducto()), item.cantidad(), clp(item.precioUnitario()), clp(subtotal)));
         }
 
         return """
@@ -85,6 +86,7 @@ public final class BoletaHtml {
                                 <strong style="font-size:15px;color:#141a33;">%2$s</strong>
                               </td>
                             </tr>
+            %5$s
                           </table>
                         </td>
                       </tr>
@@ -93,7 +95,7 @@ public final class BoletaHtml {
                         <td style="padding:16px 32px 0 32px;">
                           <table role="presentation" width="100%%" cellpadding="0" cellspacing="0">
                             <tr>
-                              <td style="padding-bottom:8px;border-bottom:2px solid #141a33;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#141a33;">Producto</td>
+                              <td colspan="2" style="padding-bottom:8px;border-bottom:2px solid #141a33;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#141a33;">Producto</td>
                               <td align="right" style="padding-bottom:8px;border-bottom:2px solid #141a33;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#141a33;">Subtotal</td>
                             </tr>
             %4$s
@@ -125,7 +127,45 @@ public final class BoletaHtml {
               </table>
             </body>
             </html>
-            """.formatted(evento.ordenId(), fecha(evento), clp(evento.total()), filas.toString());
+            """.formatted(evento.ordenId(), fecha(evento), clp(evento.total()), filas.toString(), filaMetodoPago(evento));
+    }
+
+    /** Foto del producto; si no tiene (o la URL no es http/https) se dibuja un cuadro con sus iniciales. */
+    private static String miniatura(OrdenCreadaEvento.ItemEvento item) {
+        String url = item.imagenUrl();
+        if (url != null && (url.startsWith("https://") || url.startsWith("http://"))) {
+            return "<img src=\"" + escapar(url) + "\" alt=\"" + escapar(item.nombreProducto())
+                    + "\" width=\"64\" height=\"64\" style=\"display:block;width:64px;height:64px;object-fit:cover;"
+                    + "border-radius:10px;border:1px solid #e6e9f2;background:#f4f6fd;\">";
+        }
+        return "<div style=\"width:64px;height:64px;line-height:64px;border-radius:10px;background:#2f54ff;color:#ffffff;"
+                + "text-align:center;font-size:20px;font-weight:700;\">" + escapar(iniciales(item.nombreProducto())) + "</div>";
+    }
+
+    private static String iniciales(String nombre) {
+        if (nombre == null || nombre.isBlank()) {
+            return "DG";
+        }
+        String[] palabras = nombre.trim().split("\\s+");
+        String a = palabras[0].substring(0, 1);
+        String b = palabras.length > 1 ? palabras[1].substring(0, 1) : "";
+        return (a + b).toUpperCase(Locale.ROOT);
+    }
+
+    /** Fila "Método de pago" dentro del recuadro de resumen; vacía si la orden no trae el dato. */
+    private static String filaMetodoPago(OrdenCreadaEvento evento) {
+        String metodo = evento.metodoPago();
+        if (metodo == null || metodo.isBlank()) {
+            return "";
+        }
+        return """
+                            <tr>
+                              <td colspan="2" style="padding:0 20px 16px 20px;">
+                                <span style="font-size:12px;color:#6b7390;text-transform:uppercase;letter-spacing:1px;">Método de pago</span><br>
+                                <strong style="font-size:15px;color:#141a33;">%s</strong>
+                              </td>
+                            </tr>
+                """.formatted(escapar(metodo));
     }
 
     /** Respaldo para clientes de correo que no muestran HTML. */
@@ -133,7 +173,11 @@ public final class BoletaHtml {
         StringBuilder sb = new StringBuilder();
         sb.append("¡Gracias por tu compra en DevGear Store!\n\n");
         sb.append("Orden #").append(evento.ordenId()).append('\n');
-        sb.append("Fecha: ").append(fecha(evento)).append("\n\n");
+        sb.append("Fecha: ").append(fecha(evento)).append('\n');
+        if (evento.metodoPago() != null && !evento.metodoPago().isBlank()) {
+            sb.append("Método de pago: ").append(evento.metodoPago()).append('\n');
+        }
+        sb.append('\n');
         sb.append("Detalle:\n");
         if (evento.items() != null) {
             for (OrdenCreadaEvento.ItemEvento item : evento.items()) {
